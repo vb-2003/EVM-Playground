@@ -521,9 +521,108 @@ const Editor = ({ readOnly = false }: Props) => {
   )
 
   return (
-    <div className="bg-gray-100 dark:bg-black-700 rounded-lg border border-gray-200 dark:border-black-400">
-      <div className="flex flex-col md:flex-row">
-        <div className="w-full md:w-1/2">
+    <div>
+      <div className="mb-3 rounded-lg border border-gray-200 dark:border-black-400 bg-gray-50 dark:bg-black-700 px-4 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Toggle
+            id="fork-mode"
+            text="Fork with Anvil"
+            isChecked={forkConfig.enabled}
+            onChange={handleForkToggle}
+          />
+          {forkConfig.status === 'loading' && (
+            <Message type="warning" text="Loading forked state..." />
+          )}
+          {forkConfig.status === 'ready' && (
+            <Message type="success" text="Forked contract loaded" />
+          )}
+          {forkConfig.status === 'error' && forkConfig.error && (
+            <Message type="error" text={forkConfig.error} />
+          )}
+        </div>
+
+        {forkConfig.enabled && (
+          <div className="mt-2 flex flex-col gap-3">
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
+              <Input
+                placeholder="Contract address"
+                className="bg-white dark:bg-black-500 flex-1"
+                value={forkConfig.contractAddress}
+                onChange={(event) =>
+                  setForkConfig({
+                    contractAddress: event.target.value,
+                  })
+                }
+              />
+              <Button
+                onClick={handleLoadForkedContract}
+                size="sm"
+                disabled={!forkConfig.contractAddress}
+              >
+                Load forked contract
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <Input
+                placeholder="Anvil RPC URL"
+                className="bg-white dark:bg-black-500"
+                value={forkConfig.rpcUrl}
+                onChange={(event) =>
+                  setForkConfig({
+                    rpcUrl: event.target.value,
+                  })
+                }
+              />
+              <Input
+                placeholder="Block number"
+                className="bg-white dark:bg-black-500"
+                value={forkConfig.blockNumber}
+                onChange={(event) =>
+                  setForkConfig({
+                    blockNumber: event.target.value,
+                  })
+                }
+              />
+              <Input
+                placeholder="Prefetch slots"
+                className="bg-white dark:bg-black-500"
+                value={forkConfig.prefetchSlots}
+                onChange={(event) =>
+                  setForkConfig({
+                    prefetchSlots: event.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
+              <Input
+                placeholder="Storage slot (hex or decimal)"
+                className="bg-white dark:bg-black-500 md:w-1/2"
+                value={forkSlotInput}
+                onChange={(event) => setForkSlotInput(event.target.value)}
+              />
+              <Button
+                onClick={handleFetchStorageSlot}
+                size="sm"
+                outline
+                disabled={!forkedContract}
+              >
+                Fetch slot
+              </Button>
+            </div>
+
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Forked runs override the editor bytecode.
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-gray-100 dark:bg-black-700 rounded-lg border border-gray-200 dark:border-black-400">
+        <div className="flex flex-col md:flex-row">
+          <div className="w-full md:w-1/2">
           <div className="border-b border-gray-200 dark:border-black-500 flex items-center pl-6 pr-2 h-14 md:border-r">
             <Header
               onCodeTypeChange={handleCodeTypeChange}
@@ -627,111 +726,6 @@ const Editor = ({ readOnly = false }: Props) => {
                       </Button>
                     </div>
                   </div>
-
-                  <div className="border-t border-gray-200 dark:border-black-500 px-4 py-3 md:border-r">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center justify-between">
-                        <Toggle
-                          id="fork-mode"
-                          text="Fork with Anvil"
-                          isChecked={forkConfig.enabled}
-                          onChange={handleForkToggle}
-                        />
-                        {forkConfig.status === 'loading' && (
-                          <Message
-                            type="warning"
-                            text="Loading forked state..."
-                          />
-                        )}
-                        {forkConfig.status === 'ready' && (
-                          <Message
-                            type="success"
-                            text="Forked contract loaded"
-                          />
-                        )}
-                        {forkConfig.status === 'error' && forkConfig.error && (
-                          <Message type="error" text={forkConfig.error} />
-                        )}
-                      </div>
-
-                      {forkConfig.enabled && (
-                        <div className="flex flex-col gap-3">
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                            <Input
-                              placeholder="Anvil RPC URL"
-                              className="bg-white dark:bg-black-500"
-                              value={forkConfig.rpcUrl}
-                              onChange={(event) =>
-                                setForkConfig({ rpcUrl: event.target.value })
-                              }
-                            />
-                            <Input
-                              placeholder="Block number (optional)"
-                              className="bg-white dark:bg-black-500"
-                              value={forkConfig.blockNumber}
-                              onChange={(event) =>
-                                setForkConfig({
-                                  blockNumber: event.target.value,
-                                })
-                              }
-                            />
-                            <Input
-                              placeholder="Contract address"
-                              className="bg-white dark:bg-black-500"
-                              value={forkConfig.contractAddress}
-                              onChange={(event) =>
-                                setForkConfig({
-                                  contractAddress: event.target.value,
-                                })
-                              }
-                            />
-                            <Input
-                              placeholder="Prefetch slots (optional)"
-                              className="bg-white dark:bg-black-500"
-                              value={forkConfig.prefetchSlots}
-                              onChange={(event) =>
-                                setForkConfig({
-                                  prefetchSlots: event.target.value,
-                                })
-                              }
-                            />
-                          </div>
-
-                          <div className="flex flex-col md:flex-row md:items-center gap-3">
-                            <Button
-                              onClick={handleLoadForkedContract}
-                              size="sm"
-                              disabled={!forkConfig.contractAddress}
-                            >
-                              Load forked contract
-                            </Button>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              Forked runs override the editor bytecode.
-                            </span>
-                          </div>
-
-                          <div className="flex flex-col md:flex-row md:items-center gap-3">
-                            <Input
-                              placeholder="Storage slot (hex or decimal)"
-                              className="bg-white dark:bg-black-500 md:w-1/2"
-                              value={forkSlotInput}
-                              onChange={(event) =>
-                                setForkSlotInput(event.target.value)
-                              }
-                            />
-                            <Button
-                              onClick={handleFetchStorageSlot}
-                              size="sm"
-                              outline
-                              disabled={!forkedContract}
-                            >
-                              Fetch slot
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </>
               )}
             </Fragment>
@@ -752,9 +746,9 @@ const Editor = ({ readOnly = false }: Props) => {
               handleCopyPermalink={handleCopyPermalink}
             />
           </div>
-        </div>
+          </div>
 
-        <div className="w-full md:w-1/2">
+          <div className="w-full md:w-1/2">
           <div className="border-t md:border-t-0 border-b border-gray-200 dark:border-black-500 flex items-center pl-4 pr-6 h-14">
             <ExecutionStatus />
           </div>
@@ -770,30 +764,31 @@ const Editor = ({ readOnly = false }: Props) => {
           >
             <InstructionList containerRef={instructionsRef} />
           </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col md:flex-row-reverse">
-        <div className="w-full md:w-1/2">
-          <div
-            className="pane pane-dark overflow-auto border-t border-black-900/25 bg-gray-800 dark:bg-black-700 text-white px-4 py-3"
-            style={{ height: consoleHeight }}
-          >
-            <ExecutionState />
           </div>
         </div>
-        <div className="w-full md:w-1/2">
-          <div
-            className="pane pane-dark overflow-auto bg-gray-800 dark:bg-black-700 text-white border-t border-black-900/25 md:border-r"
-            style={{ height: consoleHeight }}
-          >
-            <Console output={output} />
+
+        <div className="flex flex-col md:flex-row-reverse">
+          <div className="w-full md:w-1/2">
+            <div
+              className="pane pane-dark overflow-auto border-t border-black-900/25 bg-gray-800 dark:bg-black-700 text-white px-4 py-3"
+              style={{ height: consoleHeight }}
+            >
+              <ExecutionState />
+            </div>
+          </div>
+          <div className="w-full md:w-1/2">
+            <div
+              className="pane pane-dark overflow-auto bg-gray-800 dark:bg-black-700 text-white border-t border-black-900/25 md:border-r"
+              style={{ height: consoleHeight }}
+            >
+              <Console output={output} />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="rounded-b-lg py-2 px-4 border-t bg-gray-800 dark:bg-black-700 border-black-900/25 text-gray-400 dark:text-gray-600 text-xs">
-        Solidity Compiler {compilerVersion}
+        <div className="rounded-b-lg py-2 px-4 border-t bg-gray-800 dark:bg-black-700 border-black-900/25 text-gray-400 dark:text-gray-600 text-xs">
+          Solidity Compiler {compilerVersion}
+        </div>
       </div>
     </div>
   )
