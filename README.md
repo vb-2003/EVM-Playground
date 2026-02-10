@@ -1,6 +1,8 @@
 # EVM Playground (Fork + Step Debugger)
 
-A minimal, local playground for stepping through EVM bytecode with stack/memory state, plus optional Anvil fork support to run against real deployed contracts.
+A minimal, local playground for stepping through EVM bytecode with stack/memory state, plus optional Anvil fork support to run against real deployed contracts. Based on evm.codes playground by Dune (https://www.evm.codes/playground).
+
+<img width="2216" height="1576" alt="image" src="https://github.com/user-attachments/assets/0c1d1011-801c-4c0f-ae61-1851974f8ca6" />
 
 ## Requirements
 
