@@ -37,6 +37,7 @@ const EditorHeader = ({ codeType, onCodeTypeChange }: Props) => {
           isSearchable={false}
           classNamePrefix="select"
           menuPlacement="auto"
+          className="min-w-[140px]"
         />
       </div>
     </div>
