@@ -403,6 +403,15 @@ export const EthereumProvider: React.FC<{}> = ({ children }) => {
     toAddress?: Address,
   ) => {
     const executionAddress = toAddress || contractAddress
+    if (toAddress && forkConfig.enabled) {
+      const existingAccount = await vm.stateManager.getAccount(executionAddress)
+      if (!existingAccount) {
+        vm.stateManager.putAccount(
+          executionAddress,
+          createAccount({ nonce: 0, balance: 0 }),
+        )
+      }
+    }
     vm.stateManager.putCode(
       executionAddress,
       Buffer.from(byteCode, 'hex'),
@@ -715,28 +724,53 @@ export const EthereumProvider: React.FC<{}> = ({ children }) => {
       const stateManager = evm.stateManager as any
       const originalGetContractStorage =
         stateManager.getContractStorage?.bind(stateManager)
+      const originalGetStorage =
+        stateManager.getStorage?.bind(stateManager)
       const originalGetContractCode =
         stateManager.getContractCode?.bind(stateManager)
 
-      stateManager.getContractStorage = async (
+      const loadStorage = async (
         address: Address,
-        key: Buffer,
+        key: Uint8Array | Buffer,
+        originalFn?: (address: Address, key: Buffer) => Promise<Buffer>,
       ) => {
-        if (originalGetContractStorage) {
-          const existing = await originalGetContractStorage(address, key)
+        const keyBuffer = Buffer.isBuffer(key) ? key : Buffer.from(key)
+        const addressText = address.toString()
+        const keyText = fromBuffer(keyBuffer)
+
+        if (originalFn) {
+          const existing = await originalFn(address, keyBuffer)
           if (existing && existing.length > 0) {
-            _putContractStorage(address, key, existing)
-            return existing
+            const isAllZero = (() => {
+              for (const byte of existing) {
+                if (byte !== 0) {
+                  return false
+                }
+              }
+              return true
+            })()
+
+            const cachedValue = storageMemory
+              .get(addressText)
+              ?.get(keyText)
+
+            if (!forkConfig.enabled || !forkClientRef.current) {
+              _putContractStorage(address, keyBuffer, existing)
+              return existing
+            }
+
+            if (cachedValue || !isAllZero) {
+              _putContractStorage(address, keyBuffer, existing)
+              return existing
+            }
           }
         }
 
         if (!forkConfig.enabled || !forkClientRef.current) {
-          return originalGetContractStorage
-            ? originalGetContractStorage(address, key)
-            : Buffer.alloc(0)
+          return originalFn ? originalFn(address, keyBuffer) : Buffer.alloc(0)
         }
 
-        const slot = ('0x' + key.toString('hex').padStart(64, '0')) as
+        const slot = ('0x' + keyBuffer.toString('hex').padStart(64, '0')) as
           `0x${string}`
         const blockNumber = _parseForkBlockNumber(forkConfig.blockNumber)
 
@@ -751,8 +785,18 @@ export const EthereumProvider: React.FC<{}> = ({ children }) => {
         }
 
         const value = Buffer.from(result.slice(2).padStart(64, '0'), 'hex')
-        _putContractStorage(address, key, value)
+        _putContractStorage(address, keyBuffer, value)
         return value
+      }
+
+      stateManager.getContractStorage = async (
+        address: Address,
+        key: Buffer,
+      ) => loadStorage(address, key, originalGetContractStorage)
+
+      if (originalGetStorage) {
+        stateManager.getStorage = async (address: Address, key: Buffer) =>
+          loadStorage(address, key, originalGetStorage)
       }
 
       stateManager.getContractCode = async (address: Address) => {
